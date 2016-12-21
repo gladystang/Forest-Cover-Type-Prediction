@@ -1,0 +1,746 @@
+Code Appendix
+Jingfang Tang cowork with Qi Li and Joanna Myers 
+##############read the data###################################
+train = read.csv(file.choose(),header=T,sep=",")
+train$Cover_Type = as.factor(train$Cover_Type)
+test<-read.csv(file.choose())
+
+library(e1071)
+library(MASS)
+library(klaR)
+library(randomForest)
+library(nnet)
+library(extraTrees)
+library(caret)
+library(ggplot2)
+########################
+# Plots Used In Report
+########################
+
+library(ggplot2)
+library(gridExtra)
+ 
+p1=qplot(Aspect,data=train,facets=Cover_Type~.,geom='bar', color=Cover_Type, 
+      xlab="Aspect (degrees azimuth)")
+p2=qplot(Horizontal_Distance_To_Fire_Points, data=train, facets=Cover_Type~.,geom='bar',
+      color=Cover_Type, xlab="Horizontal Distance to Fire Points (m)")
+grid.arrange(p1, p2, ncol=2)
+ 
+# Boxplots:
+boxplot(Elevation~Cover_Type,data=train, xlab="Tree Cover Type",ylab="Elevation (m)")
+ 
+# Scatterplots:
+train$Cover_Type = as.factor(train$Cover_Type)
+ 
+p3=qplot(Horizontal_Distance_To_Fire_Points,Horizontal_Distance_To_Hydrology,data=train,color=Cover_Type,
+      xlab="Horizontal Distance To Fire Points (m)",ylab="Horizontal Distance To Hydrology (m)")
+p4=qplot(Horizontal_Distance_To_Fire_Points,Horizontal_Distance_To_Roadways,data=train,color=Cover_Type, 
+      xlab="Horizontal Distance To Fire Points (m)",ylab="Horizontal Distance To Roadways (m)")
+grid.arrange(p3, p4, ncol=2)
+
+qplot(Vertical_Distance_To_Hydrology,Elevation,data=train,color=Cover_Type,
+      xlab="Vertical Distance To Hydrology (m)",ylab="Elevation (m)")
+qplot(Horizontal_Distance_To_Hydrology,Elevation,data=train,color=Cover_Type,
+      xlab="Horizontal Distance To Hydrology (m)",ylab="Elevation (m)")
+############################
+# END plots used in report
+############################
+
+###############################################################
+############The importance of the variables####################
+df.rf1<-randomForest(train$Cover_Type~.,data=train[,-1],importance=T,ntree=1000)
+######the top 10 important variables
+top10=df.rf1$importance[order(df.rf1$importance[,9],decreasing=T),][1:10,]
+top10[,8:9]
+###############################################################
+############The correlation of the variables for the Cover_Type
+require(ggplot2)
+require(GGally)
+require(CCA)
+factor<-train[,2:11]
+ggpairs(factor)
+
+####################################################################
+################# use the raw data
+####################################################################
+
+###############################################################
+############## split the train data into a train and test set 2/3for trainset and 1/3for testset
+###############################################################
+set.seed(123)
+
+subset1=subset(train,Cover_Type=="1")
+index1 <- 1:nrow(subset1)
+testindex1 <- sample(index1, trunc(length(index1)/3))
+testset1 <- subset1[testindex1,]
+trainset1<- subset1[-testindex1,]
+
+
+subset2=subset(train,Cover_Type=="2")
+index2 <- 1:nrow(subset2)
+testindex2 <- sample(index2, trunc(length(index2)/3))
+testset2 <- subset2[testindex2,]
+trainset2 <- subset2[-testindex2,]
+
+subset3=subset(train,Cover_Type=="3")
+index3 <- 1:nrow(subset3)
+testindex3 <- sample(index3, trunc(length(index3)/3))
+testset3 <- subset3[testindex3,]
+trainset3 <- subset3[-testindex3,]
+
+subset4=subset(train,Cover_Type=="4")
+index4 <- 1:nrow(subset4)
+testindex4 <- sample(index4, trunc(length(index4)/3))
+testset4 <- subset4[testindex4,]
+trainset4 <- subset4[-testindex4,]
+
+subset5=subset(train,Cover_Type=="5")
+index5 <- 1:nrow(subset5)
+testindex5 <- sample(index5, trunc(length(index5)/3))
+testset5 <- subset5[testindex5,]
+trainset5 <- subset5[-testindex5,]
+
+subset6=subset(train,Cover_Type=="6")
+index6 <- 1:nrow(subset6)
+testindex6 <- sample(index6, trunc(length(index6)/3))
+testset6 <- subset6[testindex6,]
+trainset6 <- subset6[-testindex6,]
+
+subset7=subset(train,Cover_Type=="7")
+index7 <- 1:nrow(subset7)
+testindex7<- sample(index7, trunc(length(index7)/3))
+testset7 <- subset7[testindex7,]
+trainset7 <- subset7[-testindex7,]
+
+testset=rbind(testset1,testset2,testset3,testset4,testset5,testset6,testset7)
+trainset=rbind(trainset1,trainset2,trainset3,trainset4,trainset5,trainset6,trainset7)
+write.table(testset,file="E:/2015 spring course stat/503/final Project/Final Project/testset13.csv",sep=",",row.names=F)
+write.table(trainset,file="E:/2015 spring course stat/503/final Project/Final Project/trainset13.csv",sep=",",row.names=F)
+
+testset=testset[,-1]
+trainset=trainset[,-1]
+###############################################################
+##############test the data with different method Boosting randomForest extraTrees
+###############################################################
+library(e1071)
+library(MASS)
+library(klaR)
+library(randomForest)
+library(nnet)
+library(extraTrees)
+####randomforest
+model.rforest = randomForest(Cover_Type~.,data=trainset,ntree=1000)
+rforest.pred = predict(model.rforest,testset[,-55])
+## compute svm confusion matrix
+table(pred=rforest.pred, true= testset[,55])#to get the confusion matrix
+
+
+#####extraTrees
+gc()
+library(rJava)
+options( java.parameters = "-Xmx7g" )
+library(extraTrees)
+setJavaMemory(8000)
+model.extree = extraTrees(trainset[,-c(55)],trainset[,c(55)],ntree=1100)
+extree.pred=predict(model.extree,newdata=trainset[,-c(55)])
+table(pred=extree.pred,true= trainset[,55])
+## compute svm confusion matrix for test
+extree.pred=predict(model.extree,newdata=testset[,-c(55)])
+table(pred=extree.pred,true= testset[,55])#to get the confusion matrix
+
+############################### two steps boosting
+gc()
+library(rJava)
+options( java.parameters = "-Xmx7g" )
+library(extraTrees)
+setJavaMemory(8000)
+
+train1 = trainset
+train1$new_cover = train1$Cover_Type
+train1$new_cover[train1$new_cover==1]=2
+
+train_temp = train1[,-c(55)]
+train_temp$new_cover = factor(train_temp$new_cover)
+forest.model_1 =  extraTrees(train_temp[,-c(55)],train_temp[,c(55)])
+
+
+
+train_temp2 = subset( train1[,-c(56)], Cover_Type==1 | Cover_Type==2 )
+train_temp2$Cover_Type = factor(train_temp2$Cover_Type)
+forest.model_2 = extraTrees(train_temp2[,-c(55)],train_temp2[,c(55)])
+
+
+
+predict1 = predict(forest.model_1,newdata=trainset[,-55])
+test_new = trainset[predict1==2,]
+
+predict2 = predict(forest.model_2,newdata=test_new[,-55])
+
+
+pre=as.numeric(predict1)+1
+pre[pre==2]=as.numeric(predict2)
+pre=as.factor(pre)
+table(pred=pre,true= trainset[,55])#to get the confusion matrix
+
+
+############## split the train data into a train and testset 37/38for trainset and 1/38for testset
+set.seed(123)
+
+subset1=subset(train,Cover_Type=="1")
+index1 <- 1:nrow(subset1)
+testindex1 <- sample(index1, trunc(length(index1)*37/38))
+testset1 <- subset1[testindex1,]
+trainset1<- subset1[-testindex1,]
+
+
+subset2=subset(train,Cover_Type=="2")
+index2 <- 1:nrow(subset2)
+testindex2 <- sample(index2, trunc(length(index2)*37/38))
+testset2 <- subset2[testindex2,]
+trainset2 <- subset2[-testindex2,]
+
+subset3=subset(train,Cover_Type=="3")
+index3 <- 1:nrow(subset3)
+testindex3 <- sample(index3, trunc(length(index3)*37/38))
+testset3 <- subset3[testindex3,]
+trainset3 <- subset3[-testindex3,]
+
+subset4=subset(train,Cover_Type=="4")
+index4 <- 1:nrow(subset4)
+testindex4 <- sample(index4, trunc(length(index4)*37/38))
+testset4 <- subset4[testindex4,]
+trainset4 <- subset4[-testindex4,]
+
+subset5=subset(train,Cover_Type=="5")
+index5 <- 1:nrow(subset5)
+testindex5 <- sample(index5, trunc(length(index5)*37/38))
+testset5 <- subset5[testindex5,]
+trainset5 <- subset5[-testindex5,]
+
+subset6=subset(train,Cover_Type=="6")
+index6 <- 1:nrow(subset6)
+testindex6 <- sample(index6, trunc(length(index6)*37/38))
+testset6 <- subset6[testindex6,]
+trainset6 <- subset6[-testindex6,]
+
+subset7=subset(train,Cover_Type=="7")
+index7 <- 1:nrow(subset7)
+testindex7<- sample(index7, trunc(length(index7)*37/38))
+testset7 <- subset7[testindex7,]
+trainset7 <- subset7[-testindex7,]
+
+testset=rbind(testset1,testset2,testset3,testset4,testset5,testset6,testset7)
+trainset=rbind(trainset1,trainset2,trainset3,trainset4,trainset5,trainset6,trainset7)
+write.table(testset,file="E:/2015 spring course stat/503/final Project/Final Project/testset37.csv",sep=",",row.names=F)
+write.table(trainset,file="E:/2015 spring course stat/503/final Project/Final Project/trainset37.csv",sep=",",row.names=F)
+testset=testset[,-1]
+trainset=trainset[,-1]
+
+###############################################################
+##############test the data with different method Boosting randomForest extraTrees
+###############################################################
+library(e1071)
+library(MASS)
+library(randomForest)
+library(nnet)
+library(extraTrees)
+
+
+
+####randomforest
+model.rforest = randomForest(Cover_Type~.,data=trainset,ntree=1000)
+rforest.pred = predict(model.rforest,testset[,-55])
+## compute svm confusion matrix
+table(pred=rforest.pred, true= testset[,55])#to get the confusion matrix
+
+
+#####extraTrees
+gc()
+library(rJava)
+options( java.parameters = "-Xmx7g" )
+library(extraTrees)
+setJavaMemory(8000)
+model.extree = extraTrees(trainset[,-c(55)],trainset[,c(55)],ntree=1100)
+extree.pred=predict(model.extree,newdata=testset[,-c(55)])
+## compute svm confusion matrix
+table(pred=extree.pred,true= testset[,55])#to get the confusion matrix
+
+############################### two steps boosting
+gc()
+library(rJava)
+options( java.parameters = "-Xmx7g" )
+library(extraTrees)
+setJavaMemory(8000)
+
+train1 = trainset
+train1$new_cover = train1$Cover_Type
+train1$new_cover[train1$new_cover==1]=2
+
+train_temp = train1[,-c(55)]
+train_temp$new_cover = factor(train_temp$new_cover)
+forest.model_1 =  extraTrees(train_temp[,-c(55)],train_temp[,c(55)])
+
+
+
+train_temp2 = subset( train1[,-c(56)], Cover_Type==1 | Cover_Type==2 )
+train_temp2$Cover_Type = factor(train_temp2$Cover_Type)
+forest.model_2 = extraTrees(train_temp2[,-c(55)],train_temp2[,c(55)])
+
+
+
+predict1 = predict(forest.model_1,newdata=trainset[,-55])
+test_new = trainset[predict1==2,]
+
+predict2 = predict(forest.model_2,newdata=test_new[,-55])
+
+
+pre=as.numeric(predict1)+1
+pre[pre==2]=as.numeric(predict2)
+pre=as.factor(pre)
+table(pred=pre,true= trainset[,55])#to get the confusion matrix
+
+
+
+############## resample the data from train to get an unbanlance dataset 
+set.seed(123)
+
+subset1=subset(train,Cover_Type=="1")
+index1 <- 1:nrow(subset1)
+testindex1 <- sample(index1, size=30000, replace = TRUE)
+testindex11<-sample(testindex1,trunc(length(testindex1)/3))
+testset1 <- subset1[testindex11,]
+trainindex11<-sample(testindex1,trunc(length(testindex1)*2/3))
+trainset1<- subset1[trainindex11,]
+
+
+subset2=subset(train,Cover_Type=="2")
+index2 <- 1:nrow(subset2)
+testindex2 <- sample(index2, size=20000, replace = TRUE)
+testindex22<-sample(testindex2,trunc(length(testindex2)/3))
+testset2 <- subset2[testindex22,]
+trainindex22<-sample(testindex1,trunc(length(testindex2)*2/3))
+trainset2<- subset2[trainindex22,]
+
+
+subset3=subset(train,Cover_Type=="3")
+index3 <- 1:nrow(subset3)
+testindex3 <- sample(index3, size=4000, replace = TRUE)
+testindex33<-sample(testindex3,trunc(length(testindex3)/3))
+testset3 <- subset3[testindex33,]
+trainindex33<-sample(testindex3,trunc(length(testindex3)*2/3))
+trainset3 <- subset3[trainindex33,]
+
+subset4=subset(train,Cover_Type=="4")
+index4 <- 1:nrow(subset4)
+testindex4 <- sample(index4, size=200, replace = TRUE)
+testindex44<-sample(testindex4,trunc(length(testindex4)/3))
+testset4 <- subset4[testindex44,]
+trainindex44<-sample(testindex4,trunc(length(testindex4)*2/3))
+trainset4<- subset4[trainindex44,]
+
+
+subset5=subset(train,Cover_Type=="5")
+index5 <- 1:nrow(subset5)
+testindex5 <- sample(index5, size=2000, replace = TRUE)
+testindex55<-sample(testindex5,trunc(length(testindex5)/3))
+testset5 <- subset5[testindex55,]
+trainindex55<-sample(testindex5,trunc(length(testindex5)*2/3))
+trainset5<- subset5[trainindex55,]
+
+subset6=subset(train,Cover_Type=="6")
+index6 <- 1:nrow(subset6)
+testindex6 <- sample(index6, size=2000, replace = TRUE)
+testindex66<-sample(testindex6,trunc(length(testindex6)/3))
+testset6 <- subset6[testindex66,]
+trainindex66<-sample(testindex6,trunc(length(testindex6)*2/3))
+trainset6<- subset6[trainindex66,]
+
+subset7=subset(train,Cover_Type=="7")
+index7 <- 1:nrow(subset7)
+testindex7<- sample(index7, size=3000, replace = TRUE)
+testindex77<-sample(testindex7,trunc(length(testindex7)/3))
+testset7 <- subset7[testindex77,]
+trainindex77<-sample(testindex7,trunc(length(testindex7)*2/3))
+trainset7<- subset7[trainindex77,]
+
+
+testset=rbind(testset1,testset2,testset3,testset4,testset5,testset6,testset7)
+trainset=rbind(trainset1,trainset2,trainset3,trainset4,trainset5,trainset6,trainset7)
+testset=testset[,-1]
+trainset=trainset[,-1]
+
+write.table(testset,file="E:/2015 spring course stat/503/final Project/Final Project/testset.csv",sep=",",row.names=F)
+write.table(trainset,file="E:/2015 spring course stat/503/final Project/Final Project/trainset.csv",sep=",",row.names=F)
+
+###############################################################
+##############test the data with different method Boosting randomForest extraTrees
+###############################################################
+library(e1071)
+library(MASS)
+library(klaR)
+library(randomForest)
+library(nnet)
+library(extraTrees)
+
+
+
+####randomforest
+model.rforest = randomForest(Cover_Type~.,data=trainset,ntree=1000)
+rforest.pred = predict(model.rforest,testset[,-55])
+## compute svm confusion matrix
+table(pred=rforest.pred, true= testset[,55])#to get the confusion matrix
+
+
+#####extraTrees
+gc()
+library(rJava)
+options( java.parameters = "-Xmx7g" )
+library(extraTrees)
+setJavaMemory(8000)
+model.extree = extraTrees(trainset[,-c(55)],trainset[,c(55)],ntree=1100)
+extree.pred= extraTrees(trainset[,-c(55)],trainset[,c(55)],ntree=1100)
+extree.pred=predict(model.extree,newdata=trainset[,-c(55)])
+## compute svm confusion matrix
+table(pred=extree.pred,true= trainset[,55])#to get the confusion matrix
+############################### two steps boosting 0.80124 with raw dataset
+gc()
+library(rJava)
+options( java.parameters = "-Xmx7g" )
+library(extraTrees)
+setJavaMemory(8000)
+trainset<-read.csv(file.choose(),header=T,sep=",")
+train1 = trainset
+train1$new_cover = train1$Cover_Type
+train1$new_cover[train1$new_cover==1]=2
+
+train_temp = train1[,-c(55)]
+train_temp$new_cover = factor(train_temp$new_cover)
+forest.model_1 =  extraTrees(train_temp[,-c(55)],train_temp[,c(55)])
+
+
+
+train_temp2 = subset( train1[,-c(56)], Cover_Type==1 | Cover_Type==2 )
+train_temp2$Cover_Type = factor(train_temp2$Cover_Type)
+forest.model_2 = extraTrees(train_temp2[,-c(55)],train_temp2[,c(55)])
+save(forest.model_1,file="E:/2015 spring course stat/503/final Project/Final Project/modelstep1a")
+save(forest.model_2,file="E:/2015 spring course stat/503/final Project/Final Project/modelstep2a")
+
+Cover_Type1<-predict(forest.model_1,newdata=test[c(1:200000),-1])
+ 
+Cover_Type2<-predict(forest.model_1,newdata=test[c(200001:400000),-1])
+Cover_Type3<-predict(forest.model_1,newdata=test[-c(1:400000),-1])
+
+Cover_Type[c(1:100000)]<-Cover_Type1
+ 
+Cover_Type[c(200001:400000)]<-Cover_Type2
+Cover_Type[c(400001:565892)]<-Cover_Type3
+test_new = test[Cover_Type==2,]
+predict2 = predict(forest.model_2,newdata=test_new[,-1])
+pre=as.numeric(Cover_Type)
+
+pre[pre==2]=as.numeric(predict2)
+pre=as.factor(pre)
+table(pred=pre,true= trainset[,55])
+Id=test$Id
+Cover_Type=pre
+submission9=data.frame(Id,Cover_Type)
+write.table(submission9,file="E:/2015 spring course stat/503/final Project/Final Project/sub9.csv",sep=",",row.names=F)
+predict1 = predict(forest.model_1,newdata=test[,-1])
+test_new = test[predict1==2,]
+
+predict2 = predict(forest.model_2,newdata=test_new[,-1])
+
+
+pre=as.numeric(predict1)+1
+pre[pre==2]=as.numeric(predict2)
+pre=as.factor(pre)
+table(pred=pre,true= trainset[,55])#to get the confusion matrix
+
+###############################################################
+##########adding new variables and Make prediction with these new variables by using 
+########################two steps boosting of extraTree with resampling train data model
+train = read.table(file.choose(),header=T,sep=",")
+#open dataset with resampling train dataset in unbalanced resampling method
+test = read.table(file.choose(),header=T,sep=",")
+
+train1 = train
+###############################################################
+##########Begin of adding new variables
+###############################################################
+train1$Hydrology<-train1$Horizontal_Distance_To_Hydrology^2+train1$Vertical_Distance_To_Hydrology^2
+train1$HR<-train1$Horizontal_Distance_To_Roadways+train1$Horizontal_Distance_To_Hydrology
+train1$HF<-train1$Horizontal_Distance_To_Fire_Points+train1$Horizontal_Distance_To_Hydrology
+train1$RF<-train1$Horizontal_Distance_To_Roadways+train1$Horizontal_Distance_To_Fire_Points
+train1$HR2<-train1$Horizontal_Distance_To_Roadways-train1$Horizontal_Distance_To_Hydrology
+train1$HF2<-train1$Horizontal_Distance_To_Fire_Points-train1$Horizontal_Distance_To_Hydrology
+train1$RF2<-train1$Horizontal_Distance_To_Roadways-train1$Horizontal_Distance_To_Fire_Points
+
+test$Hydrology<-test$Horizontal_Distance_To_Hydrology^2+test$Vertical_Distance_To_Hydrology^2
+test$HR<-test$Horizontal_Distance_To_Roadways+test$Horizontal_Distance_To_Hydrology
+test$HF<-test$Horizontal_Distance_To_Fire_Points+test$Horizontal_Distance_To_Hydrology
+test$RF<-test$Horizontal_Distance_To_Roadways+test$Horizontal_Distance_To_Fire_Points
+test$HR2<-test$Horizontal_Distance_To_Roadways-test$Horizontal_Distance_To_Hydrology
+test$HF2<-test$Horizontal_Distance_To_Fire_Points-test$Horizontal_Distance_To_Hydrology
+test$RF2<-test$Horizontal_Distance_To_Roadways-test$Horizontal_Distance_To_Fire_Points
+
+train1$EH<-train1$Elevation-train1$Horizontal_Distance_To_Hydrology
+train1$EH2<-train1$Elevation-train1$Vertical_Distance_To_Hydrology
+
+test$EH<-test$Elevation-test$Horizontal_Distance_To_Hydrology
+test$EH2<-test$Elevation-test$Vertical_Distance_To_Hydrology
+###############################################################
+##########End of adding new variables
+###############################################################
+
+############################### Make prediction with these new variables by using 
+########################two steps boosting of extraTree with resampling train data model
+
+train1$new_cover = train1$Cover_Type
+train1$new_cover[train1$new_cover==1]=2
+
+train_temp = train1[,-c(56)]
+train_temp$new_cover = factor(train_temp$new_cover)
+forest.model_1 =  extraTrees(train_temp[,-c(56)],train_temp[,c(56)])
+
+
+
+train_temp2 = subset( train1[,-c(57)], Cover_Type==1 | Cover_Type==2 )
+train_temp2$Cover_Type = factor(train_temp2$Cover_Type)
+forest.model_2 = extraTrees(train_temp2[,-c(56)],train_temp2[,c(56)])
+
+
+
+predict1 = predict(forest.model_1,newdata=train[,-56])
+train_new = train[predict1==2,]
+
+predict2 = predict(forest.model_2,newdata=train_new[,-56])
+
+summary(predict1)
+summary(predict2)
+pre<-train[,1]
+pre<-test[,1]
+pre=as.numeric(predict1)+1
+pre[pre==2]=as.numeric(predict2)
+pre=as.factor(pre)
+
+Id=test$Id
+Cover_Type<-pre
+submission_B=data.frame(Id,Cover_Type)
+
+write.table(submission_B,file="E:/2015 spring course stat/503/final Project/Final Project/submiss_B.csv",sep=",",row.names=F)
+
+####Try GBM method part
+
+###################################################
+## Step 1: Data Preparation
+###################################################
+# installing/loading the latest installr package:
+#install.packages("installr"); library(installr) #load / install+load installr
+
+#updateR() # updating R.
+rm(list = ls(all = TRUE))
+gc()
+
+library(ggplot2)
+library(caret)
+
+# Load Training data
+train = read.table(file.choose(),header=T,sep=",")
+test = read.table(file.choose(),header=T,sep=",")
+
+# Look at data types
+str(train)
+
+# Change data types of categorical variables
+train$Wilderness_Area1=as.factor(train$Wilderness_Area1)
+train$Wilderness_Area2=as.factor(train$Wilderness_Area2)
+train$Wilderness_Area3=as.factor(train$Wilderness_Area3)
+train$Wilderness_Area4=as.factor(train$Wilderness_Area4)
+train$Soil_Type1=as.factor(train$Soil_Type1)
+train$Soil_Type2=as.factor(train$Soil_Type2)
+train$Soil_Type3=as.factor(train$Soil_Type3)
+train$Soil_Type4=as.factor(train$Soil_Type4)
+train$Soil_Type5=as.factor(train$Soil_Type5)
+train$Soil_Type6=as.factor(train$Soil_Type6)
+train$Soil_Type7=as.factor(train$Soil_Type7)
+train$Soil_Type8=as.factor(train$Soil_Type8)
+train$Soil_Type9=as.factor(train$Soil_Type9)
+train$Soil_Type10=as.factor(train$Soil_Type10)
+train$Soil_Type11=as.factor(train$Soil_Type11)
+train$Soil_Type12=as.factor(train$Soil_Type12)
+train$Soil_Type13=as.factor(train$Soil_Type13)
+train$Soil_Type14=as.factor(train$Soil_Type14)
+train$Soil_Type15=as.factor(train$Soil_Type15)
+train$Soil_Type16=as.factor(train$Soil_Type16)
+train$Soil_Type17=as.factor(train$Soil_Type17)
+train$Soil_Type18=as.factor(train$Soil_Type18)
+train$Soil_Type19=as.factor(train$Soil_Type19)
+train$Soil_Type20=as.factor(train$Soil_Type20)
+train$Soil_Type21=as.factor(train$Soil_Type21)
+train$Soil_Type22=as.factor(train$Soil_Type22)
+train$Soil_Type23=as.factor(train$Soil_Type23)
+train$Soil_Type24=as.factor(train$Soil_Type24)
+train$Soil_Type25=as.factor(train$Soil_Type25)
+train$Soil_Type26=as.factor(train$Soil_Type26)
+train$Soil_Type27=as.factor(train$Soil_Type27)
+train$Soil_Type28=as.factor(train$Soil_Type28)
+train$Soil_Type29=as.factor(train$Soil_Type29)
+train$Soil_Type30=as.factor(train$Soil_Type30)
+train$Soil_Type31=as.factor(train$Soil_Type31)
+train$Soil_Type32=as.factor(train$Soil_Type32)
+train$Soil_Type33=as.factor(train$Soil_Type33)
+train$Soil_Type34=as.factor(train$Soil_Type34)
+train$Soil_Type35=as.factor(train$Soil_Type35)
+train$Soil_Type36=as.factor(train$Soil_Type36)
+train$Soil_Type37=as.factor(train$Soil_Type37)
+train$Soil_Type38=as.factor(train$Soil_Type38)
+train$Soil_Type39=as.factor(train$Soil_Type39)
+train$Soil_Type40=as.factor(train$Soil_Type40)
+train$Cover_Type=as.factor(train$Cover_Type)
+
+# remove zero variance
+train$Soil_Type7=NULL
+train$Soil_Type15=NULL
+
+# remove Id
+train$Id=NULL
+
+summary(train)
+
+# Change names of outcome variables 
+# else Caret won't be able to create confusion matrix
+train$Cover_Type = as.character(train$Cover_Type)
+train$Cover_Type[train$Cover_Type == "1"] <- "Seg1"
+train$Cover_Type[train$Cover_Type == "2"] <- "Seg2"
+train$Cover_Type[train$Cover_Type == "3"] <- "Seg3"
+train$Cover_Type[train$Cover_Type == "4"] <- "Seg4"
+train$Cover_Type[train$Cover_Type == "5"] <- "Seg5"
+train$Cover_Type[train$Cover_Type == "6"] <- "Seg6"
+train$Cover_Type[train$Cover_Type == "7"] <- "Seg7"
+train$Cover_Type = as.factor(train$Cover_Type)
+
+
+#####################################################
+## Stage 2: Model building, using Gradient Boosting
+#####################################################
+
+# We will use caret package to apply boosting for classification
+library(caret)
+
+# List of independent variables
+x_vars = setdiff(names(train),c("Cover_Type"))
+
+
+# Define the range of values over which we would want to cross-validate our model
+Grid <-  expand.grid(
+  n.trees = c(500),
+  interaction.depth = c(20) ,
+  shrinkage = 0.2)
+
+# Define the parameters for cross validation
+fitControl <- trainControl(method = "none", classProbs = TRUE)
+
+# Initialize randomization seed
+set.seed(1334)  
+GBMmodel <- train(Cover_Type ~ .,
+                  train,
+                  method = "gbm",
+                  trControl = fitControl,
+                  verbose = TRUE,
+                  tuneGrid = Grid,
+                  ## Specify which metric to optimize
+                  ## We will optimize AUC of ROC curve as it best encapsulates the predictive power of a model                 
+                  metric = "ROC")
+
+
+GBMpredTrain = predict(GBMmodel, newdata = train)
+confusionMatrix(GBMpredTrain, train$Cover_Type)
+table(GBMpredTrain, train$Cover_Type)
+#####################################################
+## Stage 3: Predcit label for test data
+#####################################################
+
+# Load Test data
+test = read.csv("../input/test.csv")
+
+# Change data types
+test$Wilderness_Area1=as.factor(test$Wilderness_Area1)
+test$Wilderness_Area2=as.factor(test$Wilderness_Area2)
+test$Wilderness_Area3=as.factor(test$Wilderness_Area3)
+test$Wilderness_Area4=as.factor(test$Wilderness_Area4)
+test$Soil_Type1=as.factor(test$Soil_Type1)
+test$Soil_Type2=as.factor(test$Soil_Type2)
+test$Soil_Type3=as.factor(test$Soil_Type3)
+test$Soil_Type4=as.factor(test$Soil_Type4)
+test$Soil_Type5=as.factor(test$Soil_Type5)
+test$Soil_Type6=as.factor(test$Soil_Type6)
+test$Soil_Type7=as.factor(test$Soil_Type7)
+test$Soil_Type8=as.factor(test$Soil_Type8)
+test$Soil_Type9=as.factor(test$Soil_Type9)
+test$Soil_Type10=as.factor(test$Soil_Type10)
+test$Soil_Type11=as.factor(test$Soil_Type11)
+test$Soil_Type12=as.factor(test$Soil_Type12)
+test$Soil_Type13=as.factor(test$Soil_Type13)
+test$Soil_Type14=as.factor(test$Soil_Type14)
+test$Soil_Type15=as.factor(test$Soil_Type15)
+test$Soil_Type16=as.factor(test$Soil_Type16)
+test$Soil_Type17=as.factor(test$Soil_Type17)
+test$Soil_Type18=as.factor(test$Soil_Type18)
+test$Soil_Type19=as.factor(test$Soil_Type19)
+test$Soil_Type20=as.factor(test$Soil_Type20)
+test$Soil_Type21=as.factor(test$Soil_Type21)
+test$Soil_Type22=as.factor(test$Soil_Type22)
+test$Soil_Type23=as.factor(test$Soil_Type23)
+test$Soil_Type24=as.factor(test$Soil_Type24)
+test$Soil_Type25=as.factor(test$Soil_Type25)
+test$Soil_Type26=as.factor(test$Soil_Type26)
+test$Soil_Type27=as.factor(test$Soil_Type27)
+test$Soil_Type28=as.factor(test$Soil_Type28)
+test$Soil_Type29=as.factor(test$Soil_Type29)
+test$Soil_Type30=as.factor(test$Soil_Type30)
+test$Soil_Type31=as.factor(test$Soil_Type31)
+test$Soil_Type32=as.factor(test$Soil_Type32)
+test$Soil_Type33=as.factor(test$Soil_Type33)
+test$Soil_Type34=as.factor(test$Soil_Type34)
+test$Soil_Type35=as.factor(test$Soil_Type35)
+test$Soil_Type36=as.factor(test$Soil_Type36)
+test$Soil_Type37=as.factor(test$Soil_Type37)
+test$Soil_Type38=as.factor(test$Soil_Type38)
+test$Soil_Type39=as.factor(test$Soil_Type39)
+test$Soil_Type40=as.factor(test$Soil_Type40)
+
+# Perform prediction on test data
+GBMpredTest = predict(GBMmodel, newdata = test[,x_vars])
+
+# Create file for submission
+submission = data.frame(Id = test$Id, Cover_Type = as.character(gsub("Seg", "", GBMpredTest)))
+write.table(submission,file="C://Users//qiliplus//Desktop//submission_GBM.csv",sep=",",row.names=F)
+###0.70286 benchmark
+
+
+# add new variables
+train$Hydrology<-train$Horizontal_Distance_To_Hydrology^2+train$Vertical_Distance_To_Hydrology^2
+train$HR<-train$Horizontal_Distance_To_Roadways+train$Horizontal_Distance_To_Hydrology
+train$HF<-train$Horizontal_Distance_To_Fire_Points+train$Horizontal_Distance_To_Hydrology
+train$RF<-train$Horizontal_Distance_To_Roadways+train$Horizontal_Distance_To_Fire_Points
+train$HR2<-train$Horizontal_Distance_To_Roadways-train$Horizontal_Distance_To_Hydrology
+train$HF2<-train$Horizontal_Distance_To_Fire_Points-train$Horizontal_Distance_To_Hydrology
+train$RF2<-train$Horizontal_Distance_To_Roadways-train$Horizontal_Distance_To_Fire_Points
+
+test$Hydrology<-test$Horizontal_Distance_To_Hydrology^2+test$Vertical_Distance_To_Hydrology^2
+test$HR<-test$Horizontal_Distance_To_Roadways+test$Horizontal_Distance_To_Hydrology
+test$HF<-test$Horizontal_Distance_To_Fire_Points+test$Horizontal_Distance_To_Hydrology
+test$RF<-test$Horizontal_Distance_To_Roadways+test$Horizontal_Distance_To_Fire_Points
+test$HR2<-test$Horizontal_Distance_To_Roadways-test$Horizontal_Distance_To_Hydrology
+test$HF2<-test$Horizontal_Distance_To_Fire_Points-test$Horizontal_Distance_To_Hydrology
+test$RF2<-test$Horizontal_Distance_To_Roadways-test$Horizontal_Distance_To_Fire_Points
+
+train$EH<-train$Elevation-train$Horizontal_Distance_To_Hydrology
+train$EH2<-train$Elevation-train$Vertical_Distance_To_Hydrology
+
+test$EH<-test$Elevation-test$Horizontal_Distance_To_Hydrology
+test$EH2<-test$Elevation-test$Vertical_Distance_To_Hydrology
+
+###new  0.74 tree=100
+###new  0.76678 tree=500
+###new  0.77900 tree=1000
