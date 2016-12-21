@@ -1,5 +1,5 @@
-Code Appendix
-Jingfang Tang cowork with Qi Li and Joanna Myers 
+# R Code Appendix
+Jingfang Tang co-work with Qi Li and Joanna Myers 
 ##############read the data###################################
 train = read.csv(file.choose(),header=T,sep=",")
 train$Cover_Type = as.factor(train$Cover_Type)
