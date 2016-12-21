@@ -14,7 +14,7 @@ library(extraTrees)
 library(caret)
 library(ggplot2)
 ########################
-# Plots Used In Report
+# Plots Used For Exploratory Data Analysis
 ########################
 
 library(ggplot2)
@@ -43,7 +43,7 @@ qplot(Vertical_Distance_To_Hydrology,Elevation,data=train,color=Cover_Type,
 qplot(Horizontal_Distance_To_Hydrology,Elevation,data=train,color=Cover_Type,
       xlab="Horizontal Distance To Hydrology (m)",ylab="Elevation (m)")
 ############################
-# END plots used in report
+# END plots used for Exploratory Data Analysis
 ############################
 
 ###############################################################
@@ -120,7 +120,7 @@ write.table(trainset,file="E:/2015 spring course stat/503/final Project/Final Pr
 testset=testset[,-1]
 trainset=trainset[,-1]
 ###############################################################
-##############test the data with different method Boosting randomForest extraTrees
+##############test the data with different methods: Boosting randomForest extraTrees
 ###############################################################
 library(e1071)
 library(MASS)
@@ -373,7 +373,7 @@ write.table(testset,file="E:/2015 spring course stat/503/final Project/Final Pro
 write.table(trainset,file="E:/2015 spring course stat/503/final Project/Final Project/trainset.csv",sep=",",row.names=F)
 
 ###############################################################
-##############test the data with different method Boosting randomForest extraTrees
+##############test the data with different methods: Boosting randomForest extraTrees
 ###############################################################
 library(e1071)
 library(MASS)
